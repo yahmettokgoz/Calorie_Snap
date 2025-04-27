@@ -6,7 +6,9 @@
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "allowJs": true, // JS dosyalarını kullanmayı sağlar
+    "checkJs": false // JS dosyalarındaki hataları kontrol etmez
   },
   "include": [
     "**/*.ts",

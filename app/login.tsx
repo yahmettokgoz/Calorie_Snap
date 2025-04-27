@@ -1,7 +1,8 @@
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../components/firebaseConfig';
+import { auth, db } from '../components/firebaseConfig'; // db eklendi
+import { doc, getDoc } from 'firebase/firestore'; // getDoc eklendi
 import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
@@ -16,9 +17,18 @@ export default function LoginScreen() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Giriş Başarılı", "Yönlendiriliyorsunuz.");
-      router.replace('/'); // Giriş başarılıysa ana sayfaya yönlendir
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Firestore'da kullanıcı profili var mı kontrol et
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (profileSnap.exists()) {
+        router.replace('/home'); // profil varsa direkt ana sayfaya
+      } else {
+        router.replace('/userinfo'); // yoksa bilgi ekranına yönlendir
+      }
     } catch (error: any) {
       Alert.alert("Giriş Hatası", error.message);
     }
