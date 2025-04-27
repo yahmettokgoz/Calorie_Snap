@@ -6,11 +6,11 @@ export default function Home() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/meal-add')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('./meal-add')}>
         <Text style={styles.buttonText}>🍽️ Yemek Ekle</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/progress')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('./progress')}>
         <Text style={styles.buttonText}>📈 İlerlemeni Gör</Text>
       </TouchableOpacity>
 
@@ -18,7 +18,7 @@ export default function Home() {
         <Text style={styles.buttonText}>📷 Öğün Çek (Fotoğraf)</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push('./photo-upload')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('./photo-gallery')}>
         <Text style={styles.buttonText}>🖼️ Öğün Yükle (Galeri)</Text>
       </TouchableOpacity>
     </View>

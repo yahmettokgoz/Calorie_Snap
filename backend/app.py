@@ -4,6 +4,8 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
 
 # 📌 Veritabanı bağlantısı
 conn = psycopg2.connect(
@@ -20,6 +22,30 @@ CORS(app)
 # 📌 Nutritionix API bilgileri
 NUTRITIONIX_APP_ID = "6ed1c98f"
 NUTRITIONIX_API_KEY = "75ca2a99aa995cfb2791eb434e475359"
+
+# 📌 Mobil uygulamadan gelen fotoğrafı kaydeden route
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # uploads klasörünü oluşturur, varsa hata vermez
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+@app.route('/upload', methods=['POST'])
+def upload_photo():
+    if 'file' not in request.files:
+        return jsonify({"error": "Dosya bulunamadı."}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({"error": "Dosya ismi boş."}), 400
+
+    if file:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        return jsonify({"message": "Fotoğraf başarıyla kaydedildi.", "file_path": filepath}), 201
+
+    return jsonify({"error": "Bilinmeyen bir hata oluştu."}), 500
 
 # 📌 Yiyecek bilgisinden veri çekip veritabanına kaydeden route
 @app.route('/nutrition', methods=['POST'])
@@ -108,4 +134,4 @@ def get_meals():
 
 # 📌 Sunucuyu çalıştır
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
