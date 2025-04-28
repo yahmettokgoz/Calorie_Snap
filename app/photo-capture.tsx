@@ -1,94 +1,107 @@
-import { Camera, CameraView, CameraType } from 'expo-camera';
-import * as MediaLibrary from 'expo-media-library';
-import { useRef, useState, useEffect } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useState, useRef } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 
 export default function PhotoCaptureScreen() {
+  const [cameraType, setCameraType] = useState<'front' | 'back'>('back');
+  const [takenPhoto, setTakenPhoto] = useState<any>(null);
   const cameraRef = useRef<CameraView>(null);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [cameraType, setCameraType] = useState<CameraType>('back');
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const router = useRouter();
+  const [permission, requestPermission] = useCameraPermissions();
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasCameraPermission(status === 'granted');
-    })();
-  }, []);
+  if (!permission || !permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text>Kamera izni verilmedi. Lütfen izin verin.</Text>
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+          <Text style={styles.buttonText}>İzin Ver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const takePicture = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
+      if (!photo) {
+        Alert.alert('Hata', 'Fotoğraf çekilemedi.');
+        return;
+      }
+      setTakenPhoto(photo);
   
-      if (photo && photo.uri) {   // 💬 Burada güvenceye alıyoruz
-        console.log('Çekilen Foto:', photo.uri);
-        setPhotoUri(photo.uri);
-        await MediaLibrary.saveToLibraryAsync(photo.uri);
-        
-        router.push({
-          pathname: '/photo-result',
-          params: { photoUri: photo.uri },
+      const formData = new FormData();
+      formData.append('file', {
+        uri: photo.uri,
+        name: `${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      } as any);
+  
+      try {
+        const response = await fetch('http://192.168.1.102:5000/upload', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         });
-      } else {
-        console.log('Fotoğraf çekilemedi.');
+  
+        if (!response.ok) {
+          throw new Error('Sunucuya yükleme başarısız.');
+        }
+  
+        Alert.alert('Başarılı', 'Fotoğraf başarıyla yüklendi!');
+        router.push('/home');
+      } catch (error) {
+        console.error('Yükleme Hatası:', error);
+        Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu.');
       }
     }
   };
   
-  
-
-  if (hasCameraPermission === null) {
-    return (
-      <View style={styles.centered}>
-        <Text>İzinler kontrol ediliyor...</Text>
-      </View>
-    );
-  }
-
-  if (hasCameraPermission === false) {
-    return (
-      <View style={styles.centered}>
-        <Text>Kamera izni verilmedi.</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      {photoUri ? (
-        <Image source={{ uri: photoUri }} style={styles.preview} />
-      ) : (
-        <CameraView
-          ref={cameraRef}
-          style={styles.camera}
-          facing={cameraType}
-        />
+      <CameraView style={styles.camera} ref={cameraRef} facing={cameraType} />
+
+      {takenPhoto && (
+        <Image source={{ uri: takenPhoto.uri }} style={styles.preview} />
       )}
+
       <TouchableOpacity style={styles.button} onPress={takePicture}>
-        <Text style={styles.buttonText}>📸 Fotoğraf Çek</Text>
+        <Text style={styles.buttonText}>📸 Öğün Fotoğrafı Çek</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  camera: { flex: 1 },
-  preview: { flex: 1 },
-  centered: {
+  container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#fff',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  camera: {
+    width: '90%',
+    height: '50%',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  preview: {
+    width: 300,
+    height: 300,
+    marginTop: 20,
+    borderRadius: 10,
   },
   button: {
-    position: 'absolute',
-    bottom: 50,
-    alignSelf: 'center',
     backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 10,
+    marginTop: 20,
   },
-  buttonText: { color: 'white', fontSize: 16 },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+  },
 });

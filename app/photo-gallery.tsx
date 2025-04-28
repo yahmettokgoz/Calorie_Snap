@@ -30,7 +30,7 @@ export default function PhotoGalleryScreen() {
     } as unknown as Blob); // ✅ TypeScript uyumlu şekilde düzenlendi
 
     try {
-      const response = await fetch('http://10.196.167.183:5000/upload', {
+      const response = await fetch('http://192.168.1.102:5000/upload', {
         method: 'POST',
         body: formData,
         headers: {

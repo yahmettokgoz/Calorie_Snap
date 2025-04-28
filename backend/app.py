@@ -5,7 +5,10 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import os
+import time
 from werkzeug.utils import secure_filename
+
+
 
 # 📌 Veritabanı bağlantısı
 conn = psycopg2.connect(
@@ -29,23 +32,33 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # uploads klasörünü oluşturur, va
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/upload', methods=['POST'])
-def upload_photo():
+def upload_file():
     if 'file' not in request.files:
-        return jsonify({"error": "Dosya bulunamadı."}), 400
+        return jsonify({'error': 'Dosya bulunamadı.'}), 400
 
     file = request.files['file']
 
     if file.filename == '':
-        return jsonify({"error": "Dosya ismi boş."}), 400
+        return jsonify({'error': 'Dosya seçilmedi.'}), 400
 
     if file:
+        # 📌 Dosya adını güvenli hale getir
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
 
-        return jsonify({"message": "Fotoğraf başarıyla kaydedildi.", "file_path": filepath}), 201
+        # 📌 Zamana göre benzersiz isim oluştur
+        timestamp = int(time.time())
+        extension = os.path.splitext(filename)[1]  # .jpg, .png gibi
+        new_filename = f"upload_{timestamp}{extension}"
 
-    return jsonify({"error": "Bilinmeyen bir hata oluştu."}), 500
+        # 📌 uploads klasörüne kaydet
+        save_path = os.path.join(UPLOAD_FOLDER, new_filename)
+        file.save(save_path)
+
+        print(f"Dosya kaydedildi: {save_path}")
+
+        return jsonify({'message': 'Fotoğraf başarıyla yüklendi.', 'filename': new_filename}), 200
+    else:
+        return jsonify({'error': 'Geçersiz dosya.'}), 400
 
 # 📌 Yiyecek bilgisinden veri çekip veritabanına kaydeden route
 @app.route('/nutrition', methods=['POST'])
