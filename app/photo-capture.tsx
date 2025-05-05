@@ -29,36 +29,57 @@ export default function PhotoCaptureScreen() {
         return;
       }
       setTakenPhoto(photo);
-  
+
       const formData = new FormData();
+      const photoName = `${Date.now()}.jpg`;
+
       formData.append('file', {
         uri: photo.uri,
-        name: `${Date.now()}.jpg`,
+        name: photoName,
         type: 'image/jpeg',
       } as any);
-  
+
       try {
-        const response = await fetch('http://10.192.11.50:5000/upload', {
+        // 1. 📤 Fotoğrafı yükle
+        const uploadResponse = await fetch('http://192.168.1.100:5000/upload', {
           method: 'POST',
           body: formData,
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
-  
-        if (!response.ok) {
+
+        if (!uploadResponse.ok) {
           throw new Error('Sunucuya yükleme başarısız.');
         }
-  
-        Alert.alert('Başarılı', 'Fotoğraf başarıyla yüklendi!');
+
+        const uploadData = await uploadResponse.json();
+        const filename = uploadData.filename;
+
+        // 2. 🔍 Tahmin yap
+        const predictResponse = await fetch('http://192.168.1.100:5000/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filename }),
+        });
+
+        if (!predictResponse.ok) {
+          throw new Error('Tahmin işlemi başarısız.');
+        }
+
+        const predictionData = await predictResponse.json();
+        const predictedFood = predictionData.prediction;
+
+        Alert.alert('Tahmin Sonucu', `📷 Bu yiyecek: ${predictedFood}`);
         router.push('/home');
       } catch (error) {
-        console.error('Yükleme Hatası:', error);
-        Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu.');
+        console.error('Tahmin Hatası:', error);
+        Alert.alert('Hata', 'Fotoğraf yüklenirken veya tahmin yapılırken hata oluştu.');
       }
     }
   };
-  
 
   return (
     <View style={styles.container}>
