@@ -8,8 +8,6 @@ import os
 import time
 from werkzeug.utils import secure_filename
 
-
-
 # 📌 Veritabanı bağlantısı
 conn = psycopg2.connect(
     host="localhost",
@@ -28,7 +26,7 @@ NUTRITIONIX_API_KEY = "75ca2a99aa995cfb2791eb434e475359"
 
 # 📌 Mobil uygulamadan gelen fotoğrafı kaydeden route
 UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # uploads klasörünü oluşturur, varsa hata vermez
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/upload', methods=['POST'])
@@ -42,23 +40,43 @@ def upload_file():
         return jsonify({'error': 'Dosya seçilmedi.'}), 400
 
     if file:
-        # 📌 Dosya adını güvenli hale getir
         filename = secure_filename(file.filename)
-
-        # 📌 Zamana göre benzersiz isim oluştur
         timestamp = int(time.time())
-        extension = os.path.splitext(filename)[1]  # .jpg, .png gibi
+        extension = os.path.splitext(filename)[1]
         new_filename = f"upload_{timestamp}{extension}"
-
-        # 📌 uploads klasörüne kaydet
         save_path = os.path.join(UPLOAD_FOLDER, new_filename)
         file.save(save_path)
 
         print(f"Dosya kaydedildi: {save_path}")
-
         return jsonify({'message': 'Fotoğraf başarıyla yüklendi.', 'filename': new_filename}), 200
     else:
         return jsonify({'error': 'Geçersiz dosya.'}), 400
+
+# 📌 Yeni: Görselden sınıflandırma tahmini yapan endpoint
+@app.route('/predict', methods=['GET'])
+def predict_meal_from_latest_image():
+    try:
+        # uploads klasöründeki en son görseli bul
+        files = [f for f in os.listdir(UPLOAD_FOLDER) if f.endswith(('.jpg', '.jpeg', '.png'))]
+        if not files:
+            return jsonify({"error": "Hiçbir fotoğraf bulunamadı."}), 404
+
+        latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(UPLOAD_FOLDER, x)))
+        latest_path = os.path.join(UPLOAD_FOLDER, latest_file)
+
+        print(f"Son yüklenen fotoğraf: {latest_file}")
+
+        # 🔮 Burada yapay zeka modeliyle tahmin yapılabilir
+        # Örnek olarak sabit bir yanıt dönüyoruz
+        predicted_label = "banana"
+
+        return jsonify({
+            "filename": latest_file,
+            "prediction": predicted_label
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # 📌 Yiyecek bilgisinden veri çekip veritabanına kaydeden route
 @app.route('/nutrition', methods=['POST'])
@@ -82,7 +100,6 @@ def add_meal_from_nutrition():
         }
 
         response = requests.post(url, headers=headers, json=payload)
-
         if response.status_code != 200:
             return jsonify({"error": "API isteği başarısız.", "status_code": response.status_code}), 500
 
@@ -118,7 +135,6 @@ def add_meal_from_nutrition():
         conn.commit()
         cur.close()
 
-        # created_at'ı JSON'a çevrilebilecek formata sokup döndürüyoruz
         meal["created_at"] = meal["created_at"].strftime("%Y-%m-%d %H:%M:%S")
 
         return jsonify(meal), 201
@@ -135,7 +151,6 @@ def get_meals():
         meals = cur.fetchall()
         cur.close()
 
-        # created_at gibi datetime tiplerini stringe çeviriyoruz
         for meal in meals:
             if meal.get('created_at'):
                 meal['created_at'] = meal['created_at'].strftime("%Y-%m-%d %H:%M:%S")

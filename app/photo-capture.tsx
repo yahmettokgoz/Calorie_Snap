@@ -38,7 +38,7 @@ export default function PhotoCaptureScreen() {
       } as any);
   
       try {
-        const response = await fetch('http://192.168.1.102:5000/upload', {
+        const response = await fetch('http://10.192.11.50:5000/upload', {
           method: 'POST',
           body: formData,
           headers: {
