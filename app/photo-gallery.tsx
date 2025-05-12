@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function PhotoGalleryScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -27,10 +27,10 @@ export default function PhotoGalleryScreen() {
       uri: selectedImage,
       name: 'upload.jpg',
       type: 'image/jpeg',
-    } as unknown as Blob);
+    } as unknown as Blob); // ✅ TypeScript uyumlu şekilde düzenlendi
 
     try {
-      const uploadResponse = await fetch('http://192.168.1.100:5000/upload', {
+      const response = await fetch('http://10.192.11.50:5000/upload', {
         method: 'POST',
         body: formData,
         headers: {
@@ -38,33 +38,16 @@ export default function PhotoGalleryScreen() {
         },
       });
 
-      if (!uploadResponse.ok) {
+      if (!response.ok) {
         throw new Error('Sunucudan başarısız yanıt alındı.');
       }
 
-      const uploadData = await uploadResponse.json();
-      const filename = uploadData.filename;
-
-      // 🔁 Fotoğraf yüklendikten sonra tahmin isteği gönder
-      const predictResponse = await fetch('http://192.168.1.100:5000/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filename }),
-      });
-
-      if (!predictResponse.ok) {
-        throw new Error('Tahmin isteği başarısız oldu.');
-      }
-
-      const predictionData = await predictResponse.json();
-      const predictedFood = predictionData.prediction;
-
-      Alert.alert('Tahmin Sonucu', `📷 Bu yiyecek: ${predictedFood}`);
+      const data = await response.json();
+      console.log('Backend Yanıtı:', data);
+      alert('Fotoğraf başarıyla yüklendi! 🎉');
     } catch (error) {
-      console.error('Hata:', error);
-      alert('Fotoğraf yüklenirken veya tahmin yapılırken bir hata oluştu.');
+      console.error('Yükleme hatası:', error);
+      alert('Fotoğraf yüklenirken bir hata oluştu.');
     }
   };
 
@@ -77,7 +60,7 @@ export default function PhotoGalleryScreen() {
       {selectedImage && (
         <>
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-
+          
           <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
             <Text style={styles.uploadButtonText}>📤 Fotoğrafı Yükle</Text>
           </TouchableOpacity>
