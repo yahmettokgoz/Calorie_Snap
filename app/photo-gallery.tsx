@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 
 export default function PhotoGalleryScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -11,43 +12,59 @@ export default function PhotoGalleryScreen() {
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+    if (!result.canceled && result.assets.length > 0) {
+      const uri = result.assets[0].uri;
+      setSelectedImage(uri);
     }
   };
 
   const handleUpload = async () => {
     if (!selectedImage) {
-      alert('Lütfen önce bir fotoğraf seçin!');
+      Alert.alert('Uyarı', 'Lütfen önce bir fotoğraf seçin.');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: selectedImage,
-      name: 'upload.jpg',
-      type: 'image/jpeg',
-    } as unknown as Blob); // ✅ TypeScript uyumlu şekilde düzenlendi
-
     try {
-      const response = await fetch('http://10.192.11.50:5000/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      console.log('🖼️ Galeri URI:', selectedImage);
+
+      const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+        encoding: FileSystem.EncodingType.Base64,
       });
 
-      if (!response.ok) {
-        throw new Error('Sunucudan başarısız yanıt alındı.');
+      const uploadResponse = await fetch('http://10.0.2.2:5000/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: 'gallery_photo.jpg',
+          image_data: base64,
+        }),
+      });
+
+      const uploadResult = await uploadResponse.json();
+      console.log('✅ Upload:', uploadResult);
+
+      if (!uploadResponse.ok || !uploadResult.filename) {
+        Alert.alert('Yükleme Hatası', 'Sunucu fotoğrafı kabul etmedi.');
+        return;
       }
 
-      const data = await response.json();
-      console.log('Backend Yanıtı:', data);
-      alert('Fotoğraf başarıyla yüklendi! 🎉');
+      const predictResponse = await fetch('http://10.0.2.2:5000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filename: uploadResult.filename }),
+      });
+
+      const predictResult = await predictResponse.json();
+      console.log('✅ Tahmin:', predictResult);
+
+      Alert.alert('Tahmin Sonucu', predictResult.prediction);
     } catch (error) {
-      console.error('Yükleme hatası:', error);
-      alert('Fotoğraf yüklenirken bir hata oluştu.');
+      console.error('🚨 Hata:', error);
+      Alert.alert('Hata', 'Bir şeyler ters gitti.');
     }
   };
 
@@ -60,9 +77,8 @@ export default function PhotoGalleryScreen() {
       {selectedImage && (
         <>
           <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-          
           <TouchableOpacity style={styles.uploadButton} onPress={handleUpload}>
-            <Text style={styles.uploadButtonText}>📤 Fotoğrafı Yükle</Text>
+            <Text style={styles.uploadButtonText}>📤 Fotoğrafı Gönder ve Tahmin Al</Text>
           </TouchableOpacity>
         </>
       )}

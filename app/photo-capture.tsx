@@ -1,74 +1,82 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useState, useRef } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 export default function PhotoCaptureScreen() {
-  const [cameraType, setCameraType] = useState<'front' | 'back'>('back');
-  const [takenPhoto, setTakenPhoto] = useState<any>(null);
-  const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [preview, setPreview] = useState<string | null>(null);
 
-  if (!permission || !permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text>Kamera izni verilmedi. Lütfen izin verin.</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>İzin Ver</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const takePhoto = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('İzin Gerekli', 'Kamera erişimi gerekli.');
+      return;
+    }
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
-      if (!photo) {
-        Alert.alert('Hata', 'Fotoğraf çekilemedi.');
-        return;
-      }
-      setTakenPhoto(photo);
-  
-      const formData = new FormData();
-      formData.append('file', {
-        uri: photo.uri,
-        name: `${Date.now()}.jpg`,
-        type: 'image/jpeg',
-      } as any);
-  
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const photoUri = result.assets[0].uri;
+      setPreview(photoUri);
+
       try {
-        const response = await fetch('http://192.168.1.105:5000/predict', {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        console.log('📥 Fotoğraf URI:', photoUri);
+
+        const base64 = await FileSystem.readAsStringAsync(photoUri, {
+          encoding: FileSystem.EncodingType.Base64,
         });
-  
-        if (!response.ok) {
-          throw new Error('Sunucuya yükleme başarısız.');
+
+        // 📤 Fotoğrafı backend'e gönder
+        const uploadResponse = await fetch('http://10.0.2.2:5000/upload', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: 'photo.jpg',
+            image_data: base64,
+          }),
+        });
+
+        const uploadResult = await uploadResponse.json();
+        console.log('✅ Upload:', uploadResult);
+
+        if (!uploadResponse.ok || !uploadResult.filename) {
+          Alert.alert('Yükleme Hatası', 'Sunucu fotoğrafı kabul etmedi.');
+          return;
         }
-  
-        Alert.alert('Başarılı', 'Fotoğraf başarıyla yüklendi!');
-        router.push('/home');
+
+        // 🧠 Tahmin isteği
+        const predictResponse = await fetch('http://10.0.2.2:5000/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filename: uploadResult.filename }),
+        });
+
+        const predictResult = await predictResponse.json();
+        console.log('✅ Tahmin:', predictResult);
+
+        Alert.alert('Tahmin Sonucu', predictResult.prediction);
+
       } catch (error) {
-        console.error('Yükleme Hatası:', error);
-        Alert.alert('Hata', 'Fotoğraf yüklenirken bir hata oluştu.');
+        console.error('🚨 Hata:', error);
+        Alert.alert('Hata', 'Bir şeyler ters gitti.');
       }
     }
   };
-  
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} ref={cameraRef} facing={cameraType} />
+      {preview && <Image source={{ uri: preview }} style={styles.preview} />}
 
-      {takenPhoto && (
-        <Image source={{ uri: takenPhoto.uri }} style={styles.preview} />
-      )}
-
-      <TouchableOpacity style={styles.button} onPress={takePicture}>
+      <TouchableOpacity style={styles.button} onPress={takePhoto}>
         <Text style={styles.buttonText}>📸 Öğün Fotoğrafı Çek</Text>
       </TouchableOpacity>
     </View>
@@ -81,27 +89,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  camera: {
-    width: '90%',
-    height: '50%',
-    borderRadius: 10,
-    overflow: 'hidden',
+    padding: 20,
   },
   preview: {
     width: 300,
     height: 300,
-    marginTop: 20,
-    borderRadius: 10,
+    borderRadius: 12,
+    marginBottom: 20,
   },
   button: {
     backgroundColor: '#4CAF50',
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
   },
   buttonText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
