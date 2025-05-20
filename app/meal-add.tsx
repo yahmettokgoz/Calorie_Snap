@@ -150,13 +150,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
   input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginBottom: 20 },
   foodItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 15,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    marginBottom: 10,
-  },
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 15,
+  backgroundColor: '#f5f5f5', // Daha açık ve sade bir ton
+  borderRadius: 10,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
+
   foodName: { fontSize: 16 },
   foodCalories: { fontSize: 16, fontWeight: 'bold' },
   modalBackground: {
