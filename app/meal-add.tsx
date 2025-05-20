@@ -93,7 +93,14 @@ export default function MealAddScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Add a Meal</Text>
+     <Text style={{ 
+  fontSize: 24, 
+  fontWeight: 'bold', 
+  marginBottom: 10, 
+  textAlign: 'center' 
+}}>
+  Besin Ara
+</Text>
 
       <TextInput
         style={styles.input}
