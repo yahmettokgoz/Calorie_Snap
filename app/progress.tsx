@@ -55,7 +55,20 @@ export default function ProgressScreen() {
 
   const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, 'meals', id));
-    await fetchMeals(); // Anlık güncelleme için
+    await fetchMeals();
+  };
+
+  const getLocalizedMealTime = (time: string) => {
+    switch (time) {
+      case 'breakfast':
+        return 'Kahvaltı';
+      case 'lunch':
+        return 'Öğle';
+      case 'dinner':
+        return 'Akşam';
+      default:
+        return time;
+    }
   };
 
   const renderMealsByTime = (time: string) => {
@@ -64,7 +77,7 @@ export default function ProgressScreen() {
 
     return (
       <View style={styles.mealGroup}>
-        <Text style={styles.mealTime}>{time.charAt(0).toUpperCase() + time.slice(1)}</Text>
+        <Text style={styles.mealTime}>{getLocalizedMealTime(time)}</Text>
         {filtered.map((item, index) => (
           <View key={index} style={styles.mealItemRow}>
             <Text style={styles.mealItemText}>
@@ -94,7 +107,6 @@ export default function ProgressScreen() {
         {renderMealsByTime('dinner')}
       </ScrollView>
 
-      {/* + Butonu */}
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/meal-add')}>
         <Text style={styles.fabText}>＋</Text>
       </TouchableOpacity>

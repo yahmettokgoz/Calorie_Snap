@@ -104,15 +104,21 @@ export default function MealAddScreen() {
       />
 
       <FlatList
-        data={searchResults}
-        keyExtractor={(item, index) => `${item.name}-${index}`}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.foodItem} onPress={() => handleSelectFood(item)}>
-            <Text style={styles.foodName}>{item.name}</Text>
-            <Text style={styles.foodCalories}>{item.calories} kcal</Text>
-          </TouchableOpacity>
-        )}
-      />
+  data={searchResults}
+  keyExtractor={(item, index) => `${item.name}-${index}`}
+  renderItem={({ item }) => (
+    <View style={styles.foodItem}>
+      <Text style={styles.foodName}>{item.name}</Text>
+      <View style={styles.foodRight}>
+        <Text style={styles.foodCalories}>{item.calories} kcal</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => handleSelectFood(item)}>
+          <Text style={styles.addButtonText}>＋</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )}
+/>
+
 
       <Modal visible={showModal} transparent animationType="slide">
         <View style={styles.modalBackground}>
@@ -169,4 +175,27 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   modalOption: { fontSize: 18, marginVertical: 10 },
   modalCancel: { marginTop: 20, color: 'red' },
+
+  foodRight: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+
+addButton: {
+  backgroundColor: '#81C784', // Daha açık yeşil (#4CAF50 yerine)
+  width: 30,
+  height: 30,
+  borderRadius: 15, // Tam yuvarlak görünüm
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+
+addButtonText: {
+  color: 'white',
+  fontSize: 18,
+  fontWeight: 'bold',
+},
+
 });
