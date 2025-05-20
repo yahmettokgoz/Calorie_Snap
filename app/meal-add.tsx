@@ -130,20 +130,20 @@ export default function MealAddScreen() {
       <Modal visible={showModal} transparent animationType="slide">
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Select Meal Time</Text>
+            <Text style={styles.modalTitle}>Öğün zamanını seç</Text>
 
             <TouchableOpacity onPress={() => handleMealTimeSelection('breakfast')}>
-              <Text style={styles.modalOption}>Breakfast</Text>
+              <Text style={styles.modalOption}>Kahvaltı</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMealTimeSelection('lunch')}>
-              <Text style={styles.modalOption}>Lunch</Text>
+              <Text style={styles.modalOption}>Öğlen</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMealTimeSelection('dinner')}>
-              <Text style={styles.modalOption}>Dinner</Text>
+              <Text style={styles.modalOption}>Akşam</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <Text style={styles.modalCancel}>İptal</Text>
             </TouchableOpacity>
           </View>
         </View>
