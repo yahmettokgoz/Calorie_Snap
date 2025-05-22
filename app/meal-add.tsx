@@ -58,48 +58,44 @@ export default function MealAddScreen() {
   };
 
   const handleMealTimeSelection = async (mealTime: string) => {
-    if (!selectedFood) return;
+  if (!selectedFood || !enteredGrams) return;
 
-    try {
-      const response = await fetch('http://192.168.1.101:5000/food-details', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ food_name: selectedFood.name }),
-      });
+  try {
+    const response = await fetch('http://192.168.1.101:5000/food-details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ food_name: selectedFood.name }),
+    });
 
-      if (!response.ok) throw new Error('Sunucu hatası');
-      const data = await response.json();
+    if (!response.ok) throw new Error('Sunucu hatası');
+    const data = await response.json();
 
-      const grams = parseFloat(enteredGrams || '0');
-      const scaleFactor = grams / 100;
+    const scaleFactor = parseFloat(enteredGrams) / 100;
 
-      const adjustedData = {
-        calories: data.calories * scaleFactor,
-        protein: data.protein * scaleFactor,
-        fat: data.fat * scaleFactor,
-        carbs: data.carbs * scaleFactor,
-      };
+    const adjustedData = {
+      meal_name: selectedFood.name,
+      calories: data.calories * scaleFactor,
+      protein: data.protein * scaleFactor,
+      fat: data.fat * scaleFactor,
+      carbs: data.carbs * scaleFactor,
+      meal_time: mealTime,
+      user_id: "test_user", // oturumdan alınacaksa güncellenecek
+    };
 
-      await saveMealToFirestore({
-        meal_name: selectedFood.name,
-        calories: adjustedData.calories,
-        protein: adjustedData.protein,
-        fat: adjustedData.fat,
-        carbs: adjustedData.carbs,
-        meal_time: mealTime,
-        user_id: "test_user",
-      });
+    await saveMealToFirestore(adjustedData);
 
-      alert(
-        `${selectedFood.name} (${mealTime})\nGram: ${grams}g\nKalori: ${adjustedData.calories.toFixed(2)} kcal\nProtein: ${adjustedData.protein.toFixed(2)}g\nYağ: ${adjustedData.fat.toFixed(2)}g\nKarbonhidrat: ${adjustedData.carbs.toFixed(2)}g`
-      );
-      setShowModal(false);
-      setEnteredGrams('100');
-    } catch (error) {
-      console.error('Besin detayları alınamadı:', error);
-      alert('Besin detayları alınırken hata oluştu.');
-    }
-  };
+    alert(
+      `${selectedFood.name} (${mealTime})\nKalori: ${adjustedData.calories.toFixed(2)} kcal\nProtein: ${adjustedData.protein.toFixed(2)}g\nYağ: ${adjustedData.fat.toFixed(2)}g\nKarbonhidrat: ${adjustedData.carbs.toFixed(2)}g`
+    );
+
+    setShowModal(false);
+    setEnteredGrams('100'); // tekrar default 100 yapabiliriz
+  } catch (error) {
+    console.error('Besin detayları alınamadı:', error);
+    alert('Besin detayları alınırken hata oluştu.');
+  }
+};
+
 
   return (
     <View style={styles.container}>
