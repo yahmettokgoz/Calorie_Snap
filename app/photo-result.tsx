@@ -19,7 +19,7 @@ export default function PhotoResultScreen() {
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    const response = await fetch('http://10.0.2.2:5000/upload', {
+    const response = await fetch('http://192.168.1.101:5000/upload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,7 +33,7 @@ export default function PhotoResultScreen() {
     const result = await response.json();
     console.log('✅ Upload sonucu:', result);
 
-    const predictResponse = await fetch('http://10.0.2.2:5000/predict', {
+    const predictResponse = await fetch('http://192.168.1.101:5000/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ filename: 'photo.jpg' }),

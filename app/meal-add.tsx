@@ -30,10 +30,11 @@ export default function MealAddScreen() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedFood, setSelectedFood] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [enteredGrams, setEnteredGrams] = useState('100');
 
   const handleSearch = async () => {
     try {
-      const response = await fetch(`http://10.0.2.2:5000/search-foods?query=${searchQuery}`);
+      const response = await fetch(`http://192.168.1.101:5000/search-foods?query=${searchQuery}`);
       if (!response.ok) throw new Error('Sunucu hatası');
 
       const data = await response.json();
@@ -60,7 +61,7 @@ export default function MealAddScreen() {
     if (!selectedFood) return;
 
     try {
-      const response = await fetch('http://10.0.2.2:5000/food-details', {
+      const response = await fetch('http://192.168.1.101:5000/food-details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ food_name: selectedFood.name }),
@@ -68,23 +69,32 @@ export default function MealAddScreen() {
 
       if (!response.ok) throw new Error('Sunucu hatası');
       const data = await response.json();
-      console.log('📦 Besin Detayları:', data);
 
-      // Firestore'a ekleme
+      const grams = parseFloat(enteredGrams || '0');
+      const scaleFactor = grams / 100;
+
+      const adjustedData = {
+        calories: data.calories * scaleFactor,
+        protein: data.protein * scaleFactor,
+        fat: data.fat * scaleFactor,
+        carbs: data.carbs * scaleFactor,
+      };
+
       await saveMealToFirestore({
         meal_name: selectedFood.name,
-        calories: data.calories,
-        protein: data.protein,
-        fat: data.fat,
-        carbs: data.carbs,
+        calories: adjustedData.calories,
+        protein: adjustedData.protein,
+        fat: adjustedData.fat,
+        carbs: adjustedData.carbs,
         meal_time: mealTime,
-        user_id: "test_user", // Oturum açan kullanıcıya göre değişecek
+        user_id: "test_user",
       });
 
       alert(
-        `${selectedFood.name} (${mealTime})\nKalori: ${data.calories} kcal\nProtein: ${data.protein}g\nYağ: ${data.fat}g\nKarbonhidrat: ${data.carbs}g`
+        `${selectedFood.name} (${mealTime})\nGram: ${grams}g\nKalori: ${adjustedData.calories.toFixed(2)} kcal\nProtein: ${adjustedData.protein.toFixed(2)}g\nYağ: ${adjustedData.fat.toFixed(2)}g\nKarbonhidrat: ${adjustedData.carbs.toFixed(2)}g`
       );
       setShowModal(false);
+      setEnteredGrams('100');
     } catch (error) {
       console.error('Besin detayları alınamadı:', error);
       alert('Besin detayları alınırken hata oluştu.');
@@ -93,14 +103,9 @@ export default function MealAddScreen() {
 
   return (
     <View style={styles.container}>
-     <Text style={{ 
-  fontSize: 24, 
-  fontWeight: 'bold', 
-  marginBottom: 10, 
-  textAlign: 'center' 
-}}>
-  Besin Ara
-</Text>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' }}>
+        Besin Ara
+      </Text>
 
       <TextInput
         style={styles.input}
@@ -111,65 +116,100 @@ export default function MealAddScreen() {
       />
 
       <FlatList
-  data={searchResults}
-  keyExtractor={(item, index) => `${item.name}-${index}`}
-  renderItem={({ item }) => (
-    <View style={styles.foodItem}>
-      <Text style={styles.foodName}>{item.name}</Text>
-      <View style={styles.foodRight}>
-        <Text style={styles.foodCalories}>{item.calories} kcal</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => handleSelectFood(item)}>
-          <Text style={styles.addButtonText}>＋</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  )}
-/>
-
-
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Öğün zamanını seç</Text>
-
-            <TouchableOpacity onPress={() => handleMealTimeSelection('breakfast')}>
-              <Text style={styles.modalOption}>Kahvaltı</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleMealTimeSelection('lunch')}>
-              <Text style={styles.modalOption}>Öğlen</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleMealTimeSelection('dinner')}>
-              <Text style={styles.modalOption}>Akşam</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Text style={styles.modalCancel}>İptal</Text>
-            </TouchableOpacity>
+        data={searchResults}
+        keyExtractor={(item, index) => `${item.name}-${index}`}
+        renderItem={({ item }) => (
+          <View style={styles.foodItem}>
+            <Text style={styles.foodName}>{item.name}</Text>
+            <View style={styles.foodRight}>
+              <Text style={styles.foodCalories}>{item.calories} kcal</Text>
+              <TouchableOpacity style={styles.addButton} onPress={() => handleSelectFood(item)}>
+                <Text style={styles.addButtonText}>＋</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        )}
+      />
+
+     <Modal visible={showModal} transparent animationType="slide">
+  <View style={styles.modalBackground}>
+    <View style={styles.modalContainer}>
+
+      {/* 1️⃣ Önce gramaj alanı */}
+      <Text style={{ fontWeight: '500', marginBottom: 5 }}>Gramajı seçiniz:</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Gram cinsinden miktar girin (örn: 150)"
+        keyboardType="numeric"
+        value={enteredGrams}
+        onChangeText={setEnteredGrams}
+      />
+
+      {/* 2️⃣ Sonra öğün zaman başlığı ve seçenekler */}
+      <Text style={styles.modalTitle}>Öğün zamanını seçiniz</Text>
+
+      <TouchableOpacity onPress={() => handleMealTimeSelection('breakfast')}>
+        <Text style={styles.modalOption}>Kahvaltı</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleMealTimeSelection('lunch')}>
+        <Text style={styles.modalOption}>Öğlen</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleMealTimeSelection('dinner')}>
+        <Text style={styles.modalOption}>Akşam</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setShowModal(false)}>
+        <Text style={styles.modalCancel}>İptal</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginBottom: 20 },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 20,
+  },
   foodItem: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: 15,
-  backgroundColor: '#f5f5f5', // Daha açık ve sade bir ton
-  borderRadius: 10,
-  marginBottom: 10,
-  borderWidth: 1,
-  borderColor: '#e0e0e0',
-},
-
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
   foodName: { fontSize: 16 },
   foodCalories: { fontSize: 16, fontWeight: 'bold' },
+  foodRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addButton: {
+    backgroundColor: '#81C784',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   modalBackground: {
     flex: 1,
     justifyContent: 'center',
@@ -186,27 +226,4 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   modalOption: { fontSize: 18, marginVertical: 10 },
   modalCancel: { marginTop: 20, color: 'red' },
-
-  foodRight: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 8,
-},
-
-addButton: {
-  backgroundColor: '#81C784', // Daha açık yeşil (#4CAF50 yerine)
-  width: 30,
-  height: 30,
-  borderRadius: 15, // Tam yuvarlak görünüm
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-
-
-addButtonText: {
-  color: 'white',
-  fontSize: 18,
-  fontWeight: 'bold',
-},
-
 });

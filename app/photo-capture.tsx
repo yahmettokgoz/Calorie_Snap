@@ -32,7 +32,7 @@ export default function PhotoCaptureScreen() {
         });
 
         // 📤 Fotoğrafı backend'e gönder
-        const uploadResponse = await fetch('http://10.0.2.2:5000/upload', {
+        const uploadResponse = await fetch('http://192.168.1.101:5000/upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ export default function PhotoCaptureScreen() {
         }
 
         // 🧠 Tahmin isteği
-        const predictResponse = await fetch('http://10.0.2.2:5000/predict', {
+        const predictResponse = await fetch('http://192.168.1.101:5000/predict', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
